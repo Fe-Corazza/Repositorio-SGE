@@ -48,9 +48,18 @@
     <tbody>
         @foreach (var item in Model)
         {
-            <tr>
-                <td>
-                    @Html.DisplayFor(modelItem => item.UrlFoto)
+            <td>
+                @{
+                    var filePath1 = Directory.GetCurrentDirectory() + "Data\\Content\\Photo" + item.UrlFoto;
+                    if (System.IO.File.Exists(filePath1))
+                    {
+                        // Carrega a imagem em memória
+                        var imageBytes = await System.IO.File.ReadAllBytesAsync(filePath1);
+                        var imageBase64 = Convert.ToBase64String(imageBytes);
+
+                        // Exibe a imagem na view
+                        <img src="data:image/png;base64 , @imageBase64 " alt="Foto do Perfil" height="50" />
+                    }}
                 </td>
                 <td>
                     @Html.DisplayFor(modelItem => item.AlunoNome)
@@ -75,7 +84,7 @@
                     <a asp-action="Details" asp-route-id="@item.AlunoId">Details</a> |
                     <a asp-action="Delete" asp-route-id="@item.AlunoId">Delete</a>
                 </td>
-            </tr>
+            </td>
         }
     </tbody>
 </table>
