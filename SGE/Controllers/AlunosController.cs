@@ -95,7 +95,8 @@ namespace SGE.Controllers
                 }
             }
 
-            ViewData["TipoUsuarioId"] = new SelectList(_context.TiposUsuario, "TipoUsuarioId", "TipoUsuarioId");
+            Guid idTipo = _context.TiposUsuario.Where(a => a.Tipo == "Aluno").FirstOrDefault().TipoUsuarioId;
+            ViewData["TipoUsuarioId"] = idTipo;
             return View();
         }
 
@@ -137,6 +138,13 @@ namespace SGE.Controllers
                     }
                     aluno.UrlFoto = newFileName; // Atualiza o campo UrlFoto com o novo nome do arquivo
                 }
+
+                aluno.CadAtivo = true;
+                aluno.DataCadastro = DateTime.Now;
+                TipoUsuario tipoUsuario = _context.TiposUsuario.Where(a => a.Tipo == "Aluno").FirstOrDefault();
+                aluno.TipoUsuarioId = tipoUsuario.TipoUsuarioId;
+                aluno.TipoUsuario = tipoUsuario;
+
                 _context.Add(aluno);
                 await _context.SaveChangesAsync();
                 Usuario usuario = new Usuario();
@@ -153,7 +161,8 @@ namespace SGE.Controllers
                 await _context.SaveChangesAsync();
                 return RedirectToAction(nameof(Index));
             }
-            ViewData["TipoUsuarioId"] = new SelectList(_context.TiposUsuario, "TipoUsuarioId", "TipoUsuarioId", aluno.TipoUsuarioId);
+            Guid idTipo = _context.TiposUsuario.Where(a => a.Tipo == "Aluno").FirstOrDefault().TipoUsuarioId;
+            ViewData["TipoUsuarioId"] = idTipo;
             return View(aluno);
         }
 
@@ -336,6 +345,41 @@ namespace SGE.Controllers
         private bool AlunoExists(Guid id)
         {
             return _context.Alunos.Any(e => e.AlunoId == id);
+        }
+
+        public async Task<IActionResult> AlterarFoto(Guid id, IFormFile novaFoto)
+        {
+            if (id == null)
+            {
+                return NotFound();
+            }
+
+            Aluno aluno = await _context.Alunos.FindAsync(id);
+            if (aluno != null && novaFoto.Length > 0)
+            {
+                var fileName = aluno.AlunoId.ToString();
+                var fileExtension = Path.GetExtension(novaFoto.FileName);
+                var newFileName = fileName + fileExtension;
+                var filePath = Path.Combine(Directory.GetCurrentDirectory(), "Data\\Content\\Photo", newFileName);
+
+                using (var fileStream = new FileStream(filePath, FileMode.Create))
+                {
+                    await novaFoto.CopyToAsync(fileStream);
+                }
+
+                aluno.UrlFoto = newFileName;
+                _context.Alunos.Update(aluno);
+                await _context.SaveChangesAsync();
+
+                var imageBytes = await System.IO.File.ReadAllBytesAsync(filePath);
+                var imageBase64 = Convert.ToBase64String(imageBytes);
+                ViewData["imagem"] = imageBase64;
+
+            }
+
+            Guid idTipo = _context.TiposUsuario.Where(a => a.Tipo == "Aluno").FirstOrDefault().TipoUsuarioId;
+
+            return View("Edit", aluno);
         }
     }
 }
